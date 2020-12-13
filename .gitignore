@@ -1,0 +1,18 @@
+# clion
+cmake-build-debug/
+CMakeFiles/
+.idea/
+CMakeCache.txt
+Makefile
+
+# cpp
+*.cbp
+
+# mac
+.DS_Store
+
+# config file
+*.ini
+
+# resources
+resources/objects/horizon/
