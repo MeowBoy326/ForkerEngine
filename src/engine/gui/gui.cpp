@@ -11,6 +11,8 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include "../forker_engine.h"
+#include "../core/resource_manager.h"
+#include "../core/cube.h"
 
 // constants
 const char* IMGUI_FONT_FAMILY = "resources/fonts/Roboto-Regular.ttf";
@@ -19,7 +21,8 @@ const float IMGUI_FONT_SIZE = 16.0f;
 const float IMGUI_FRAME_CORNER_SIZE = 2.0f;
 const float IMGUI_VIEW_MARGIN       = 20.0f;
 
-const float IMGUI_DRAG_SPEED_SLOW       = 0.001f;
+const float IMGUI_DRAG_SPEED_SUPER_SLOW = 0.001f;
+const float IMGUI_DRAG_SPEED_SLOW       = 0.005f;
 const float IMGUI_DRAG_SPEED_MEDIUM     = 0.01f;
 const float IMGUI_DRAG_SPEED_FAST       = 0.1f;
 const float IMGUI_DRAG_SPEED_SUPER_FAST = 1.0f;
@@ -82,6 +85,9 @@ void GUI::Render()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
+#include <iostream>
+#include <sstream>
+
 void GUI::renderSceneInspector()
 {
     ImGui::SetNextWindowBgAlpha(ImGuiWindowBgAlpha);
@@ -90,24 +96,114 @@ void GUI::renderSceneInspector()
         // Object
         if (ImGui::CollapsingHeader("Object Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::Text("1");
+            ImGui::PushID("Object Settings");
+
+            int& index = engine.CurrentSelectedObjectIndex;
+
+            if (index >= 0)
+            {
+                Object* currentObject = engine.SceneObjects[index];
+
+                ImGui::PushItemWidth(ImGui::GetWindowSize().x - 100.0f);
+                std::stringstream ss;
+                ss << index + 1 << ". " << currentObject->Name;
+                if (ImGui::BeginCombo("##SceneObjectCombo", ss.str().c_str()))
+                {
+                    for (unsigned int i = 0; i < engine.SceneObjects.size(); ++i)
+                    {
+                        bool selected = (i == engine.CurrentSelectedObjectIndex);
+                        std::stringstream ss;
+                        ss << i + 1 << ". " << engine.SceneObjects[i]->Name;
+                        if (ImGui::Selectable(ss.str().c_str(), selected))
+                        {
+                            engine.CurrentSelectedObjectIndex = i;
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::PopItemWidth();
+
+                ImGui::SameLine();
+
+                ImGui::Checkbox("##EnableObject", &currentObject->Enabled);
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Reset"))
+                {
+                    currentObject->Reset();
+                }
+
+                ImGui::Separator();
+
+                ImGui::DragFloat3("Position", glm::value_ptr(currentObject->Position), IMGUI_DRAG_SPEED_SLOW, 0.0f, 0.0f, "%.3f");
+                ImGui::DragFloat3("Rotation", glm::value_ptr(currentObject->Rotation), IMGUI_DRAG_SPEED_FAST, 0.0f, 0.0f, "%.2f");
+                ImGui::DragFloat3("Scale", glm::value_ptr(currentObject->Scale), IMGUI_DRAG_SPEED_MEDIUM, 0.0f, 0.0f, "%.2f");
+
+                ImGui::Separator();
+
+                ImGui::ColorEdit3("Color", glm::value_ptr(currentObject->Color));
+                ImGui::Checkbox("Coordinate", &engine.IsObjectCoordinateShown);
+
+                ImGui::Separator();
+
+                // image
+                ImVec2 uv_min = ImVec2(0.0f, 0.0f);                 // Top-left
+                ImVec2 uv_max = ImVec2(1.0f, 1.0f);                 // Lower-right
+
+                ImVec4 tint_col   = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
+                ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
+
+                ImGui::Text("Diffuse:");
+                ImGui::SameLine();
+                ImGui::Image((void*) (intptr_t) currentObject->DiffuseTexture.ID, ImVec2(38, 38), uv_min, uv_max, tint_col, border_col);
+                ImGui::SameLine();
+                ImGui::Text("Specular:");
+                ImGui::SameLine();
+                ImGui::Image((void*) (intptr_t) currentObject->SpecularTexture.ID, ImVec2(38, 38), uv_min, uv_max, tint_col, border_col);
+            }
+
+
+
+            ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x / 2.0f - 100.0f, ImGui::GetCursorPos().y));
+            if (ImGui::Button("Add Cube", ImVec2(80.0f, 0.0f)))
+            {
+                Object* cube = new Cube("Container Cube");
+                cube->DiffuseTexture  = ResourceManager::GetTexture("container_diffuse");
+                cube->SpecularTexture = ResourceManager::GetTexture("container_specular");
+                engine.SceneObjects.push_back(cube);
+                engine.CurrentSelectedObjectIndex = engine.SceneObjects.size() - 1;
+            }
+            ImGui::SameLine();
+
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.44f, 0.17f, 0.17f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.70f, 0.27f, 0.27f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.85f, 0.31f, 0.31f, 1.0f));
+            ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x / 2.0f + 20.0f, ImGui::GetCursorPos().y));
+
+            if (ImGui::Button("Delete :(", ImVec2(80.0f, 0.0f)))
+            {
+                if (index >= 0)
+                {
+                    delete engine.SceneObjects[index];
+                    engine.SceneObjects.erase(engine.SceneObjects.begin() + index);
+                    if (index == engine.SceneObjects.size())
+                        --index;
+                }
+            }
+            ImGui::PopStyleColor(3);
+
+            ImGui::PopID();
         }
 
         // Camera
         if (ImGui::CollapsingHeader("Camera Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            // position
-            ImGui::Text("Transform");
-            ImGui::Separator();
-            ImGui::Indent();
-            ImGui::DragFloat3("Position", glm::value_ptr(engine.MainCamera.Position), IMGUI_DRAG_SPEED_SLOW);
-            ImGui::SliderFloat("Y-Fov", &engine.MainCamera.Fov, 1.0f, 45.0f, "%.1f");
-            ImGui::Unindent();
+            ImGui::PushID("Camera Settings");
 
-            // yaw / pitch
-            ImGui::Text("Rotation");
-            ImGui::Separator();
-            ImGui::Indent();
+            ImGui::DragFloat3("Position", glm::value_ptr(engine.MainCamera.Position), IMGUI_DRAG_SPEED_SLOW);
+
+            // ImGui::DragFloat3("Front", glm::value_ptr(engine.MainCamera.Front), IMGUI_DRAG_SPEED_SLOW);
 
             ImGui::PushItemWidth(ImGuiGetItemWidth());
             ImGui::DragFloat("Yaw", &engine.MainCamera.Yaw, IMGUI_DRAG_SPEED_FAST, 0.0f, 0.0f, "%.1f");
@@ -115,43 +211,119 @@ void GUI::renderSceneInspector()
             ImGui::DragFloat("Pitch", &engine.MainCamera.Pitch, IMGUI_DRAG_SPEED_FAST, 0.0f, 0.0f, "%.1f");
             ImGui::PopItemWidth();
 
-            ImGui::DragFloat3("Front", glm::value_ptr(engine.MainCamera.Front), IMGUI_DRAG_SPEED_SLOW);
-            ImGui::DragFloat3("Up", glm::value_ptr(engine.MainCamera.Up), IMGUI_DRAG_SPEED_SLOW);
-            ImGui::DragFloat3("Right", glm::value_ptr(engine.MainCamera.Right), IMGUI_DRAG_SPEED_SLOW);
+            ImGui::Text("LookAt Direction: (%.3f, %.3f, %.3f)",
+                engine.MainCamera.Front.x, engine.MainCamera.Front.y,
+                engine.MainCamera.Front.z);
 
-            ImGui::Unindent();
+            // viewing
+            ImGui::Separator();
 
-            //
-            // // viewing
-            // ImGui::Text("Viewing");
-            // ImGui::Separator();
-            // ImGui::Indent();
-            //
-            // ImGui::Unindent();
+            if (engine.MainCamera.ProjectionType == PERSPECTIVE)
+            {
+                ImGui::SliderFloat("Y-Fov", &engine.MainCamera.Fov, MIN_FOV, MAX_FOV, "%.1f");
+            }
+            else
+            {
+                ImGui::SliderFloat("Scale", &engine.MainCamera.OrthoScale, MIN_ORTHO_SCALE, MAX_ORTHO_SCALE, "%.2f");
+            }
+
+            ImGui::PushItemWidth(ImGuiGetItemWidth());
+            ImGui::DragFloat("Near", &engine.MainCamera.NearPlane, IMGUI_DRAG_SPEED_FAST, 0.0f, 0.0f, "%.1f");
+            ImGui::SameLine();
+            ImGui::DragFloat("Far", &engine.MainCamera.FarPlane, IMGUI_DRAG_SPEED_FAST, 0.0f, 0.0f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::SameLine();
+            HelpMarker("Near Plane / Far Plane");
+
+            ImGui::RadioButton("Perspective", (int*) &engine.MainCamera.ProjectionType, 0);
+            ImGui::SameLine();
+            ImGui::RadioButton("Orthogonal", (int*) &engine.MainCamera.ProjectionType, 1);
+
+            ImGui::Separator();
 
             // control
-            ImGui::Text("Control");
-            ImGui::Separator();
-            ImGui::Indent();
-
             ImGui::PushItemWidth(ImGuiGetItemWidth());
             ImGui::DragFloat("Speed", &engine.MainCamera.MovementSpeed, IMGUI_DRAG_SPEED_MEDIUM, 0.0f, 0.0f, "%.2f");
             ImGui::SameLine();
             ImGui::DragFloat("Sensitivity", &engine.MainCamera.MouseSensitivity, IMGUI_DRAG_SPEED_MEDIUM, 0.0f, 0.0f, "%.2f");
             ImGui::PopItemWidth();
-            ImGui::Unindent();
 
             ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x / 2.0f - 50.0f, ImGui::GetCursorPos().y));
             if (ImGui::Button("Reset Camera"))
             {
                 engine.MainCamera.Reset();
             }
+
+            ImGui::PopID();
         }
 
         // Lighting
         if (ImGui::CollapsingHeader("Light Settings", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::Text("1");
+            ImGui::PushID("Light Settings");
+
+            ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
+            if (ImGui::BeginTabBar("LightTypeTabBar", tab_bar_flags))
+            {
+                if (ImGui::BeginTabItem("Point Light"))
+                {
+                    PointLight& pointLight = engine.MainPointLight;
+
+                    ImGui::Text("Enable Point Light:");
+                    ImGui::SameLine();
+                    ImGui::Checkbox("##EnablePointLight", &pointLight.Enabled);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Reset"))
+                    {
+                        pointLight.Reset();
+                    }
+
+                    ImGui::Separator();
+
+                    ImGui::ColorEdit3("Ambient", glm::value_ptr(pointLight.AmbientColor));
+                    ImGui::ColorEdit3("Diffuse", glm::value_ptr(pointLight.DiffuseColor));
+                    ImGui::ColorEdit3("Specular", glm::value_ptr(pointLight.SpecularColor));
+
+                    ImGui::DragFloat3("Factors", glm::value_ptr(pointLight.AttenuationFactors), IMGUI_DRAG_SPEED_SUPER_SLOW, 0.0f, 1.0f);
+                    ImGui::SameLine();
+                    HelpMarker("Attenuation Factors: constant / linear / quadratic");
+
+                    ImGui::Separator();
+
+                    ImGui::DragFloat3("Position", glm::value_ptr(pointLight.Position), IMGUI_DRAG_SPEED_SLOW);
+
+                    ImGui::EndTabItem();
+                }
+
+                if (ImGui::BeginTabItem("Directional Light"))
+                {
+                    DirectionalLight& dirLight = engine.MainDirectionalLight;
+
+                    ImGui::Text("Enable Directional Light:");
+                    ImGui::SameLine();
+                    ImGui::Checkbox("##EnableDirectionalLight", &dirLight.Enabled);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Reset"))
+                    {
+                        dirLight.Reset();
+                    }
+
+                    ImGui::Separator();
+
+                    ImGui::ColorEdit3("Ambient", glm::value_ptr(dirLight.AmbientColor));
+                    ImGui::ColorEdit3("Diffuse", glm::value_ptr(dirLight.DiffuseColor));
+                    ImGui::ColorEdit3("Specular", glm::value_ptr(dirLight.SpecularColor));
+
+                    ImGui::Separator();
+
+                    ImGui::DragFloat3("Direction", glm::value_ptr(dirLight.Direction), IMGUI_DRAG_SPEED_SLOW);
+
+                    ImGui::EndTabItem();
+                }
+                ImGui::EndTabBar();
+            }
+
+            ImGui::PopID();
         }
     }
     ImGui::End();
@@ -166,7 +338,7 @@ void GUI::renderExtraView()
     {
         // GLFW
         if (ImGui::CollapsingHeader("GLFW", ImGuiTreeNodeFlags_DefaultOpen))
-        {i
+        {
             // window size
             ImGui::Text("Window Size: ");
             ImGui::SameLine();
@@ -178,12 +350,18 @@ void GUI::renderExtraView()
             ImGui::InputInt("##ScreenHeight", (int*) &engine.Height, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
             ImGui::PopItemWidth();
 
+            ImGui::Checkbox("FPS", &ImGuiShowInfo);
+            ImGui::SameLine();
+
             // mouse control
             ImGui::Checkbox("Mouse", &engine.IsMouseControlOn);
             ImGui::SameLine();
             ImGui::Checkbox("Scroll", &engine.IsScrollControlOn);
             ImGui::SameLine();
-            ImGui::Checkbox("Show FPS", &ImGuiShowInfo);
+            HelpMarker("[Rotate Object] Hold CTRL + Hold Mouse Left Button\n"
+                       "[Look Around] Hold Mouse Right Button\n"
+                       "[Move Camera] Press W/A/S/D/Shift/Space\n"
+                       "[Change Fov] Hold Mouse Right Button + Scroll");
         }
 
         // OpenGL

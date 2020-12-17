@@ -21,32 +21,50 @@ enum Camera_Movement
     DOWN
 };
 
+enum Camera_Projection
+{
+    PERSPECTIVE,
+    ORTHOGONAL
+};
+
 // Default camera values
-const glm::vec3 POSITION(0.0f, 0.0f, 0.0f);
+const glm::vec3 POSITION(0.0f, 0.0f, 6.0f);
 const glm::vec3 UP_VECTOR(0.0f, 1.0f, 0.0f);
-const float     YAW         = -90.0f;
-const float     PITCH       = 0.0f;
-const float     SPEED       = 2.5f;
-const float     SENSITIVITY = 0.05f;
-const float     FOV         = 45.0f;  // y-fov
+const float     YAW                 = -90.0f;
+const float     PITCH               = 0.0f;
+const float     SPEED               = 2.5f;
+const float     SENSITIVITY         = 0.08f;
+const float     INITIAL_FOV         = 45.0f;  // y-fov
+const float     MIN_FOV             = 1.0f;
+const float     MAX_FOV             = 90.0f;
+const float     INITIAL_ORTHO_SCALE = 0.5f;   // scale view
+const float     MIN_ORTHO_SCALE     = 0.0f;
+const float     MAX_ORTHO_SCALE     = 1.0f;
+const float     NEAR_PLANE          = 0.1f;
+const float     FAR_PLANE           = 100.0f;
 
 // An abstract camera class that processes input and calculates the corresponding Euler Angles, Vectors and Matrices for use in OpenGL
 class Camera
 {
 public:
     // camera attributes
-    glm::vec3 Position;
-    glm::vec3 Front;
-    glm::vec3 Up;
-    glm::vec3 Right;
-    glm::vec3 WorldUp;
+    glm::vec3         Position;
+    glm::vec3         Front;
+    glm::vec3         Up;
+    glm::vec3         Right;
+    glm::vec3         WorldUp;
     // euler angles
-    float     Yaw;
-    float     Pitch;
+    float             Yaw;
+    float             Pitch;
     // camera options
-    float     MovementSpeed;
-    float     MouseSensitivity;
-    float     Fov;
+    float             MovementSpeed;
+    float             MouseSensitivity;
+    // viewing
+    float             Fov;
+    float             OrthoScale;
+    float             NearPlane;
+    float             FarPlane;
+    Camera_Projection ProjectionType;
 
     // Constructor w/ Vectors
     Camera(glm::vec3 position = POSITION, glm::vec3 up = UP_VECTOR,
@@ -54,6 +72,7 @@ public:
 
     // Returns the view matrix calculated using Euler Angles and the LookAt Matrix
     glm::mat4 GetViewMatrix();
+    glm::mat4 GetProjectionMatrix(float viewWidth, float viewHeight);
 
     // Reset camera
     void Reset();

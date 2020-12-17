@@ -94,13 +94,20 @@ add_executable(
     # engine
     src/engine/forker_engine.cpp
 
-    src/engine/resource/resource_manager.cpp
-    src/engine/resource/shader.cpp
-    src/engine/resource/texture.cpp
+    src/engine/core/camera.cpp
+    src/engine/core/resource_manager.cpp
+    src/engine/core/shader.cpp
+    src/engine/core/texture.cpp
+    src/engine/core/object.cpp
+    src/engine/core/cube.cpp
+    src/engine/core/renderer.cpp
+    src/engine/core/cube_renderer.cpp
+    src/engine/core/light.cpp
+    src/engine/core/directional_light.cpp
+    src/engine/core/point_light.cpp
 
     src/engine/gui/gui.cpp
 
-    src/engine/camera.cpp
 )
 target_include_directories(ForkerEngine PRIVATE ${INCLUDE_DIRS})
 target_link_libraries(ForkerEngine PRIVATE ${LIBS})

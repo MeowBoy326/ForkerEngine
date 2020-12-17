@@ -5,10 +5,15 @@
 #ifndef _FORKER_ENGINE_H_
 #define _FORKER_ENGINE_H_
 
+#include <vector>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "camera.h"
+#include "core/camera.h"
+#include "core/object.h"
+#include "core/directional_light.h"
+#include "core/point_light.h"
 
 class ForkerEngine
 {
@@ -16,12 +21,15 @@ public:
     unsigned int Width, Height;
     GLFWwindow* MainWindow;
 
-    Camera MainCamera;
+    std::vector<Object*> SceneObjects;
+    Camera               MainCamera;
+    PointLight           MainPointLight;
+    DirectionalLight     MainDirectionalLight;
 
-    float MouseOffset[2];
-    float ScrollOffset;
-    bool  KeysPressed[1024];
-    bool  KeysProcessed[1024];
+    int CurrentSelectedObjectIndex;
+
+    bool KeysPressed[1024];
+    bool KeysProcessed[1024];
 
     // State
     bool IsDepthTestOn;
@@ -29,6 +37,8 @@ public:
     bool IsMouseControlOn;
     bool IsScrollControlOn;
     bool IsFreeLookingModeOn;
+    bool IsObjectRotationModeOn;
+    bool IsObjectCoordinateShown;
 
     glm::vec3 ClearColor;
 
@@ -40,7 +50,9 @@ public:
     void Init();
 
     // Input
-    void ProcessInput(float dt);
+    void ProcessKeyboardInput(float dt);
+    void ProcessMouseInput(float xoffset, float yoffset);
+    void ProcessScrollInput(float offset);
 
     // Loop
     void Update(float dt);

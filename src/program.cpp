@@ -77,7 +77,7 @@ int main()
         glfwPollEvents();  // IO events
 
         // input
-        Engine->ProcessInput(deltaTime);
+        Engine->ProcessKeyboardInput(deltaTime);
 
         // update
         Engine->Update(deltaTime);
@@ -159,14 +159,13 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     lastX = xpos;
     lastY = ypos;
 
-    Engine->MouseOffset[0] = xoffset;
-    Engine->MouseOffset[1] = yoffset;
+    Engine->ProcessMouseInput(xoffset, yoffset);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    Engine->ScrollOffset = yoffset;
+    Engine->ProcessScrollInput(yoffset);
 }
 
 bool checkIfRunInRetina(GLFWwindow* window, float* dpi)

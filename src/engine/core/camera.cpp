@@ -6,19 +6,32 @@
 
 // Constructor w/ Vectors
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch)
-    : Front(glm::vec3(0.0f, 0.0f, -1.0f)),
-      MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Fov(FOV)
+    : Position(position), WorldUp(up), Yaw(yaw), Pitch(pitch),
+      Front(glm::vec3(0.0f, 0.0f, -1.0f)),
+      MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY),
+      Fov(INITIAL_FOV), OrthoScale(INITIAL_ORTHO_SCALE),
+      NearPlane(NEAR_PLANE), FarPlane(FAR_PLANE), ProjectionType(PERSPECTIVE)
 {
-    Position = position;
-    WorldUp  = up;
-    Yaw      = yaw;
-    Pitch    = pitch;
     updateCameraVectors();
 }
 
 glm::mat4 Camera::GetViewMatrix()
 {
     return glm::lookAt(Position, Position + Front, Up);
+}
+
+#include <iostream>
+glm::mat4 Camera::GetProjectionMatrix(float viewWidth, float viewHeight)
+{
+    if (ProjectionType == PERSPECTIVE)
+        return glm::perspective(glm::radians(Fov), viewWidth / viewHeight, NearPlane, FarPlane);
+    else if (ProjectionType == ORTHOGONAL)
+    {
+        float scale = 1.0f / OrthoScale;
+        float right = viewWidth / viewWidth * scale;
+        float top   = viewHeight / viewWidth * scale;  // keep the ratio
+        return glm::ortho(-right, right, -top, top, NearPlane, FarPlane);
+    }
 }
 
 void Camera::Reset()
@@ -29,7 +42,10 @@ void Camera::Reset()
     Pitch            = PITCH;
     MovementSpeed    = SPEED;
     MouseSensitivity = SENSITIVITY;
-    Fov              = FOV;
+    Fov              = INITIAL_FOV;
+    OrthoScale       = INITIAL_ORTHO_SCALE;
+    NearPlane        = NEAR_PLANE;
+    FarPlane         = FAR_PLANE;
     updateCameraVectors();
 }
 
@@ -71,10 +87,10 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constraintP
 void Camera::ProcessMouseScroll(float yoffset)
 {
     Fov -= (float) yoffset;
-    if (Fov < 1.0f)
-        Fov = 1.0f;
-    if (Fov > 45.0f)
-        Fov = 45.0f;
+    if (Fov < MIN_FOV)
+        Fov = MIN_FOV;
+    if (Fov > MAX_FOV)
+        Fov = MAX_FOV;
 }
 
 void Camera::ProcessRotationUpdate()
